@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -k \"node server/local.js\" \"vite\"",
-    "test": "node --test test/",
+    "test": "node --test",
     "test:ui": "vitest run",
     "build": "vite build",
     "seed": "node scripts/seed.js"
