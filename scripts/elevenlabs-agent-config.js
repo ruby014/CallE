@@ -50,11 +50,12 @@ export function describeApiError(payload) {
   return typeof detail === 'string' ? detail : JSON.stringify(detail);
 }
 
-export function buildAgentPayload(toolIds) {
+export function buildAgentPayload(toolIds, voiceId) {
   return {
     name: AGENT_NAME,
     tags: ['calle', 'demo'],
     conversation_config: {
+      ...(voiceId ? { tts: { voice_id: voiceId } } : {}),
       agent: {
         language: 'en',
         first_message: 'Hello, I am CallE, an AI agent authorized to negotiate a service offer on behalf of {{customer_name}}. I would like to discuss the available options.',

@@ -53,3 +53,8 @@ test('agent speaks for the named customer, not a fictional one', () => {
   assert.match(prompt.prompt, /\{\{customer_name\}\}/);
   assert.doesNotMatch(first, /fictional/i);
 });
+
+test('agent payload uses the configured ElevenLabs voice', () => {
+  const payload = buildAgentPayload([], 'pMoNLyx4SuX3WzVHeQK9');
+  assert.equal(payload.conversation_config.tts.voice_id, 'pMoNLyx4SuX3WzVHeQK9');
+});

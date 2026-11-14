@@ -30,7 +30,7 @@ async function provisionTools() {
 }
 
 async function provisionAgent(toolIds) {
-  const payload = buildAgentPayload(toolIds);
+  const payload = buildAgentPayload(toolIds, process.env.ELEVENLABS_VOICE_ID);
   const agents = await request(`/agents?search=${encodeURIComponent(AGENT_NAME)}&page_size=100`);
   const existing = (agents.agents ?? []).find((agent) => agent.name === AGENT_NAME && !agent.archived);
   return existing
