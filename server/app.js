@@ -2,7 +2,7 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import { COOKIE_NAME, principalForSlot, resolveSession } from './sessions.js';
 
-export function createApp({ config, sessionStore }) {
+export function createApp({ config, sessionStore, memories, runs }) {
   const app = express();
   app.use(express.json({ limit: '50kb' }));
   app.use(cookieParser());
@@ -40,6 +40,53 @@ export function createApp({ config, sessionStore }) {
   });
 
   app.get('/api/session', (req, res) => res.json({ user: req.principal.label }));
+
+  const handle = (fn) => async (req, res, next) => {
+    try {
+      await fn(req, res);
+    } catch (err) {
+      if (/not found/i.test(err.message)) return res.status(404).json({ error: 'Not found' });
+      if (/^(invalid|explicit user approval|memory (content|source|expiry))/i.test(err.message)) {
+        return res.status(400).json({ error: err.message });
+      }
+      next(err);
+    }
+  };
+  const parseMemory = (body) => ({
+    content: body?.content,
+    source: body?.source,
+    expiresAt: new Date(body?.expiresAt),
+  });
+
+  if (memories) {
+    app.get('/api/memories', handle(async (req, res) => res.json(await memories.list(req.principal))));
+    app.post('/api/memories', handle(async (req, res) =>
+      res.status(201).json(await memories.save(req.principal, parseMemory(req.body)))));
+    app.patch('/api/memories/:id', handle(async (req, res) =>
+      res.json(await memories.correct(req.principal, req.params.id, parseMemory(req.body)))));
+    app.delete('/api/memories/:id', handle(async (req, res) => {
+      await memories.forget(req.principal, req.params.id);
+      res.status(204).end();
+    }));
+  }
+
+  if (runs) {
+    app.post('/api/runs', handle(async (req, res) => res.status(201).json(await runs.startRun(req.principal, req.body))));
+    app.get('/api/runs/:id', handle(async (req, res) => res.json(await runs.getRun(req.principal, req.params.id))));
+    app.post('/api/runs/:id/field', handle(async (req, res) =>
+      res.json(await runs.authorizeField(req.principal, req.params.id, req.body?.field))));
+    app.post('/api/runs/:id/actions', handle(async (req, res) => {
+      await runs.recordAction(req.principal, req.params.id, req.body);
+      res.status(201).json({ ok: true });
+    }));
+    app.post('/api/runs/:id/complete', handle(async (req, res) =>
+      res.json(await runs.completeRun(req.principal, req.params.id, req.body))));
+    app.post('/api/runs/:id/memory', handle(async (req, res) =>
+      res.status(201).json(await runs.saveOfferAsMemory(req.principal, req.params.id, {
+        approved: req.body?.approved,
+        expiresAt: new Date(req.body?.expiresAt),
+      }))));
+  }
 
   app.use((err, _req, res, _next) => {
     console.error(err.message);
