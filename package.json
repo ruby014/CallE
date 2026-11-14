@@ -9,7 +9,8 @@
     "test:ui": "vitest run",
     "build": "vite build",
     "check:atlas": "node scripts/check-atlas.js",
-    "seed": "node scripts/seed.js"
+    "seed": "node scripts/seed.js",
+    "provision:elevenlabs": "node scripts/provision-elevenlabs.js"
   },
   "dependencies": {
     "@elevenlabs/react": "^1.22.1",
