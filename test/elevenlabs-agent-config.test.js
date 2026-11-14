@@ -47,6 +47,13 @@ test('CallE agent can hang up: end_call system tool plus a no-deal exit rule', (
   assert.match(prompt.prompt, /accept the offer on the user's behalf/i);
 });
 
+test('agent refuses an unauthorized field and blocks the call if pressed', () => {
+  const { prompt } = buildAgentPayload([]).conversation_config.agent;
+  assert.match(prompt.prompt, /allowed false, you must not say, guess, or hint/i);
+  assert.match(prompt.prompt, /not authorized sharing that detail/i);
+  assert.match(prompt.prompt, /still insists[^.]*verification_blocked/i);
+});
+
 test('agent speaks for the named customer, not a fictional one', () => {
   const { prompt, first_message: first } = buildAgentPayload([]).conversation_config.agent;
   assert.match(first, /\{\{customer_name\}\}/);
