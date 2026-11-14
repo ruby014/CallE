@@ -18,9 +18,9 @@ export const clientTools = [
       parameters: {
         type: 'object', required: ['type', 'monthlyPrice', 'memoryIdsUsed'],
         properties: {
-          type: { type: 'string', enum: ['counter_offer'] },
+          type: { type: 'string', enum: ['counter_offer'], description: 'Always counter_offer for a proposed monthly price.' },
           monthlyPrice: { type: 'number', description: 'The proposed monthly price.' },
-          memoryIdsUsed: { type: 'array', items: { type: 'string' }, description: 'Retrieved memory IDs used for this proposal.' },
+          memoryIdsUsed: { type: 'array', items: { type: 'string', description: 'A retrieved memory ID from this run.' }, description: 'Retrieved memory IDs used for this proposal.' },
         },
       },
     },
@@ -32,14 +32,23 @@ export const clientTools = [
       parameters: {
         type: 'object', required: ['status'],
         properties: {
-          status: { type: 'string', enum: ['offer_obtained', 'no_offer', 'verification_blocked'] },
-          monthlyPrice: { type: 'number' },
-          durationMonths: { type: 'integer' },
+          status: { type: 'string', enum: ['offer_obtained', 'no_offer', 'verification_blocked'], description: 'The final negotiation status.' },
+          monthlyPrice: { type: 'number', description: 'The obtained monthly price, required only when status is offer_obtained.' },
+          durationMonths: { type: 'integer', description: 'The obtained offer duration in months, required only when status is offer_obtained.' },
         },
       },
     },
   },
 ];
+
+export function isCompatibleExistingClientTool(tool) {
+  return !tool || tool.tool_config?.type === 'client';
+}
+
+export function describeApiError(payload) {
+  const detail = payload?.detail ?? payload?.message ?? payload;
+  return typeof detail === 'string' ? detail : JSON.stringify(detail);
+}
 
 export function buildAgentPayload(toolIds) {
   return {

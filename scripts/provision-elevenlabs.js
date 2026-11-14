@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { AGENT_NAME, buildAgentPayload, clientTools } from './elevenlabs-agent-config.js';
+import { AGENT_NAME, buildAgentPayload, clientTools, describeApiError, isCompatibleExistingClientTool } from './elevenlabs-agent-config.js';
 
 const API_ROOT = 'https://api.elevenlabs.io/v1/convai';
 
@@ -10,7 +10,7 @@ async function request(path, { method = 'GET', body } = {}) {
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(`ElevenLabs ${method} ${path} failed (${response.status}): ${payload.detail?.message ?? payload.detail ?? payload.message ?? 'unknown error'}`);
+  if (!response.ok) throw new Error(`ElevenLabs ${method} ${path} failed (${response.status}): ${describeApiError(payload)}`);
   return payload;
 }
 
@@ -20,7 +20,7 @@ async function provisionTools() {
   const ids = [];
   for (const tool of clientTools) {
     const prior = byName.get(tool.tool_config.name);
-    if (prior?.tool_config?.type !== 'client') throw new Error(`Existing tool ${tool.tool_config.name} is not a client tool.`);
+    if (!isCompatibleExistingClientTool(prior)) throw new Error(`Existing tool ${tool.tool_config.name} is not a client tool.`);
     const result = prior
       ? await request(`/tools/${prior.id}`, { method: 'PATCH', body: tool })
       : await request('/tools', { method: 'POST', body: tool });
