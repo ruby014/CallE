@@ -26,10 +26,10 @@ export default function Landing() {
       <section className="hero">
         <div className="hero-copy">
           <span className="pill">MongoDB Atlas Vector Search · ElevenLabs voice</span>
-          <h1>Your bill, negotiated.<br /><span className="gradient">Memory you can govern.</span></h1>
+          <h1>Stop haggling.<br /><span className="gradient">CallE calls, remembers, and gets you the better price.</span></h1>
           <p className="lead">
-            CallE is an AI agent that phones your provider and negotiates for you. It remembers what worked last time,
-            and every memory is private, expiring, correctable and provable.
+            CallE is an AI agent that phones your provider and negotiates for you. It uses your past deals as leverage,
+            and every memory is private to you, and you can correct, expire or forget it.
           </p>
           <div className="cta-row">
             <a className="btn btn-primary btn-lg" href="#/demo">Try the live demo</a>
