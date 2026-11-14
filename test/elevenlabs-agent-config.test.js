@@ -44,4 +44,5 @@ test('CallE agent can hang up: end_call system tool plus a no-deal exit rule', (
   assert.equal(prompt.built_in_tools.end_call.params.system_tool_type, 'end_call');
   assert.match(prompt.prompt, /report_outcome[^.]*then call end_call/i);
   assert.match(prompt.prompt, /do not keep talking/i);
+  assert.match(prompt.prompt, /accept the offer on the user's behalf/i);
 });
