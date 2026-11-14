@@ -36,6 +36,7 @@ test('client tool parameter leaves describe the values the agent must supply', (
   assert.ok(outcome.properties.status.description);
   assert.ok(outcome.properties.monthlyPrice.description);
   assert.ok(outcome.properties.durationMonths.description);
+});
 
 test('CallE agent can hang up: end_call system tool plus a no-deal exit rule', () => {
   const { prompt } = buildAgentPayload([]).conversation_config.agent;
