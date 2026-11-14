@@ -65,9 +65,17 @@ export function buildAgentPayload(toolIds) {
         },
         prompt: {
           tool_ids: toolIds,
+          built_in_tools: {
+            end_call: {
+              type: 'system', name: 'end_call', params: { system_tool_type: 'end_call' },
+              description: 'End the call once a final outcome has been reported, or when no agreement is reachable. Give a brief polite goodbye as the message.',
+            },
+          },
           prompt: `You are CallE, an AI agent conducting a browser role-play with a teammate acting as a fictional service-provider representative. Identify yourself as an AI agent. Your goal is {{goal}} with these limits: {{limits}}. The only verified prior offers available to you are {{memories}}.
 
-Use a verified retrieved offer only when it is present in {{memories}}. Never invent prior offers or leverage. Before speaking a counteroffer, call record_negotiation_action with type counter_offer, the exact monthly price, and only IDs from the supplied memories. If the representative requests verification, call get_authorized_field only for phone or dob and wait for its result. If it denies access, request an alternate method; never request or disclose SIN, payment-card details, or any other field. Never accept, cancel, or claim to change a contract. When the conversation ends, call report_outcome with offer_obtained, no_offer, or verification_blocked.`,
+Use a verified retrieved offer only when it is present in {{memories}}. Never invent prior offers or leverage. Before speaking a counteroffer, call record_negotiation_action with type counter_offer, the exact monthly price, and only IDs from the supplied memories. If the representative requests verification, call get_authorized_field only for phone or dob and wait for its result. If it denies access, request an alternate method; never request or disclose SIN, payment-card details, or any other field. Never accept, cancel, or claim to change a contract. When the conversation ends, call report_outcome with offer_obtained, no_offer, or verification_blocked.
+
+Know when to walk away: make at most three counteroffers within your limits. If the representative will not go to or below your limit after that, refuses to move, or verification is blocked, do not keep talking. Say one brief, polite closing line, call report_outcome with no_offer (or verification_blocked), then call end_call. Also call end_call after reporting an offer_obtained outcome. After reporting an outcome, do not keep talking.`,
         },
       },
     },
