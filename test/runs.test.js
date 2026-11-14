@@ -142,15 +142,25 @@ test('run input validation rejects missing provider/goal and bad permissions', a
   await assert.rejects(() => service.startRun(A, request({ permissions: { phone: 'yes' } })), /invalid/i);
 });
 
-test('saving an offer as memory needs explicit approval and an obtained offer', async () => {
+test('completing a run saves memory automatically for any outcome, once', async () => {
   const { service, calls } = build();
-  const { runId } = await service.startRun(A, request());
-  await assert.rejects(() => service.saveOfferAsMemory(A, runId, { approved: true, expiresAt: new Date('2026-12-31') }), /invalid/i);
-  await service.completeRun(A, runId, { status: 'offer_obtained', monthlyPrice: 75, durationMonths: 12 });
-  await assert.rejects(() => service.saveOfferAsMemory(A, runId, { approved: false, expiresAt: new Date('2026-12-31') }), /approv/i);
-  const saved = await service.saveOfferAsMemory(A, runId, { approved: true, expiresAt: new Date('2026-12-31') });
+  const won = await service.startRun(A, request());
+  const done = await service.completeRun(A, won.runId, { status: 'offer_obtained', monthlyPrice: 75, durationMonths: 12 });
+  await service.completeRun(A, won.runId, { status: 'offer_obtained', monthlyPrice: 75, durationMonths: 12 });
   assert.equal(calls.saved.length, 1);
   assert.match(calls.saved[0].content, /\$75/);
-  assert.equal(calls.saved[0].source, `run:${runId}`);
-  assert.equal(saved.source, `run:${runId}`);
+  assert.equal(calls.saved[0].source, `run:${won.runId}`);
+  assert.ok(done.memory);
+  const lost = await service.startRun(A, request());
+  await service.completeRun(A, lost.runId, { status: 'no_offer' });
+  assert.equal(calls.saved.length, 2);
+  assert.match(calls.saved[1].content, /no offer was obtained/);
+});
+
+test('a failed memory write does not fail run completion', async () => {
+  const { service } = build({ saveMemory: async () => { throw new Error('db down'); } });
+  const { runId } = await service.startRun(A, request());
+  const done = await service.completeRun(A, runId, { status: 'no_offer' });
+  assert.equal(done.run.outcome.status, 'no_offer');
+  assert.equal(done.memory, null);
 });

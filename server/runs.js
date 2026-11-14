@@ -82,6 +82,14 @@ function validateOutcome(o) {
   return { status: o.status, monthlyPrice: null, durationMonths: null };
 }
 
+const MEMORY_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+function memoryText(run, outcome) {
+  if (outcome.status === 'offer_obtained') return `${run.provider} offered $${outcome.monthlyPrice} per month for ${outcome.durationMonths} months.`;
+  if (outcome.status === 'verification_blocked') return `${run.provider} negotiation was blocked at identity verification; no offer was obtained.`;
+  return `${run.provider} would not agree to a deal for goal '${run.goal}'; no offer was obtained.`;
+}
+
 export function createRunService({
   store,
   retrieveMemories,
@@ -185,18 +193,17 @@ export function createRunService({
       }
       const email = { status, subject, body };
       await store.set(runId, principal, { email });
-      return { run: sanitize({ ...claimed, email }), email };
-    },
-
-    async saveOfferAsMemory(principal, runId, { approved, expiresAt }) {
-      const run = await load(principal, runId);
-      if (run.outcome?.status !== 'offer_obtained') throw invalid('run: no obtained offer to save');
-      if (approved !== true) throw new Error('Explicit user approval is required');
-      return saveMemory(principal, {
-        content: `${run.provider} offered $${run.outcome.monthlyPrice} per month for ${run.outcome.durationMonths} months.`,
-        source: `run:${runId}`,
-        expiresAt,
-      });
+      let memory = null;
+      try {
+        memory = await saveMemory(principal, {
+          content: memoryText(claimed, outcome),
+          source: `run:${runId}`,
+          expiresAt: new Date(now().getTime() + MEMORY_TTL_MS),
+        });
+      } catch {
+        // A failed memory write must not fail the completed run.
+      }
+      return { run: sanitize({ ...claimed, email }), email, memory };
     },
   };
 }

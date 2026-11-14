@@ -6,7 +6,7 @@ const DEFAULT_RUN = { provider: 'DemoNet', goal: '', maxMonthlyPrice: 80, recipi
 const readableError = (error) => error instanceof Error ? error.message : 'Something went wrong.';
 const formatDate = (value) => value ? new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'no expiry';
 
-function Trace({ actions, outcome, onSaveOffer, saved }) {
+function Trace({ actions, outcome }) {
   const run = outcome?.run;
   const email = outcome?.email;
   return (
@@ -44,11 +44,7 @@ function Trace({ actions, outcome, onSaveOffer, saved }) {
               <p>{email.body}</p>
             </div>
           )}
-          {run.outcome?.status === 'offer_obtained' && (
-            <button type="button" className="btn btn-primary" onClick={onSaveOffer} disabled={saved}>
-              {saved ? 'Saved to memory' : 'Approve and save offer to memory'}
-            </button>
-          )}
+          <p className="muted">Saved automatically to memory (expires in 30 days). You can correct or forget it above.</p>
         </div>
       )}
     </section>
@@ -65,7 +61,6 @@ export default function App({ agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID
   const [editingMemory, setEditingMemory] = useState(null);
   const [actions, setActions] = useState([]);
   const [outcome, setOutcome] = useState(null);
-  const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const [starting, setStarting] = useState(false);
 
@@ -80,12 +75,12 @@ export default function App({ agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID
 
   async function signOut() {
     try { await apiFetch('/api/session/logout', { method: 'POST' }); } catch { /* cookie may already be gone */ }
-    setUser(null); setPin(''); setContext(null); setMemories([]); setActions([]); setOutcome(null); setSaved(false); setError('');
+    setUser(null); setPin(''); setContext(null); setMemories([]); setActions([]); setOutcome(null); setError('');
   }
 
   async function startRun(event) {
     event.preventDefault();
-    setError(''); setStarting(true); setContext(null); setActions([]); setOutcome(null); setSaved(false);
+    setError(''); setStarting(true); setContext(null); setActions([]); setOutcome(null);
     try {
       setContext(await apiFetch('/api/runs', { method: 'POST', body: {
         provider: form.provider, goal: form.goal, limits: { maxMonthlyPrice: Number(form.maxMonthlyPrice) },
@@ -111,14 +106,6 @@ export default function App({ agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID
       setEditingMemory(null);
       await refreshMemories();
     } catch (cause) { setError(`Unable to correct memory: ${readableError(cause)}`); }
-  }
-  async function saveOffer() {
-    try {
-      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-      await apiFetch(`/api/runs/${context.runId}/memory`, { method: 'POST', body: { approved: true, expiresAt } });
-      setSaved(true);
-      await refreshMemories();
-    } catch (cause) { setError(`Unable to save memory: ${readableError(cause)}`); }
   }
   useEffect(() => { if (user) refreshMemories(); }, [user]);
 
@@ -205,8 +192,8 @@ export default function App({ agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID
             <section className="card" aria-labelledby="retrieved-heading"><h2 id="retrieved-heading">Retrieved for this run</h2>
               {context.memories.length ? <ul className="memory-list">{context.memories.map((memory) => <li key={memory.id}><div><span>{memory.content}</span> <small className="muted">({memory.source})</small></div></li>)}</ul> : <p className="muted">No eligible memories retrieved.</p>}
             </section>
-            {agentId ? <VoiceSession agentId={agentId} context={{ ...context, customerName: user.replace(/\s*\(.*\)$/, '') }} onAction={(action) => setActions((current) => [...current, action])} onFieldRequest={(field) => setActions((current) => [...current, { type: 'field_request', allowed: field.allowed }])} onOutcome={setOutcome} onError={(cause) => setError(readableError(cause))} /> : <p className="error" role="alert">Voice is not configured. Set VITE_ELEVENLABS_AGENT_ID to the public ElevenLabs agent ID.</p>}
-            <Trace actions={actions} outcome={outcome} onSaveOffer={saveOffer} saved={saved} />
+            {agentId ? <VoiceSession agentId={agentId} context={{ ...context, customerName: user.replace(/\s*\(.*\)$/, '') }} onAction={(action) => setActions((current) => [...current, action])} onFieldRequest={(field) => setActions((current) => [...current, { type: 'field_request', allowed: field.allowed }])} onOutcome={(result) => { setOutcome(result); refreshMemories(); }} onError={(cause) => setError(readableError(cause))} /> : <p className="error" role="alert">Voice is not configured. Set VITE_ELEVENLABS_AGENT_ID to the public ElevenLabs agent ID.</p>}
+            <Trace actions={actions} outcome={outcome} />
           </>}
         </div>
       </main>

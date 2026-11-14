@@ -86,11 +86,6 @@ export function createApp({ config, sessionStore, memories, runs }) {
     }));
     app.post('/api/runs/:id/complete', handle(async (req, res) =>
       res.json(await runs.completeRun(req.principal, req.params.id, req.body))));
-    app.post('/api/runs/:id/memory', handle(async (req, res) =>
-      res.status(201).json(await runs.saveOfferAsMemory(req.principal, req.params.id, {
-        approved: req.body?.approved,
-        expiresAt: new Date(req.body?.expiresAt),
-      }))));
   }
 
   app.use((err, _req, res, _next) => {
