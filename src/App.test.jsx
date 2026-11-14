@@ -55,6 +55,28 @@ describe('App', () => {
     }));
   });
 
+  it('removes a forgotten memory from the retrieved-for-this-run panel', async () => {
+    const saved = [{ id: 'memory-a', content: 'Prior offer was $75.', source: 'seed', expiresAt: '2030-01-01T00:00:00.000Z' }];
+    global.fetch.mockImplementation((path, options) => {
+      if (path === '/api/session') return Promise.resolve({ ok: true, json: async () => ({ user: 'Tenant A' }) });
+      if (path === '/api/runs') return Promise.resolve({ ok: true, json: async () => ({
+        runId: 'run-a', provider: 'DemoNet', goal: 'g', limits: {}, memories: saved,
+      }) });
+      if (path === '/api/memories/memory-a' && options?.method === 'DELETE') { saved.length = 0; return Promise.resolve({ ok: true, status: 204, json: async () => ({}) }); }
+      if (path === '/api/memories') return Promise.resolve({ ok: true, json: async () => [...saved] });
+      throw new Error(`Unexpected fetch: ${path}`);
+    });
+    render(<App agentId="agent-test" />);
+    await screen.findByText('Signed in as Tenant A');
+    fireEvent.change(screen.getByLabelText('Goal'), { target: { value: 'g' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Start negotiation' }));
+    await screen.findByTestId('voice-session');
+    expect(screen.getAllByText('Prior offer was $75.').length).toBe(2);
+    fireEvent.click(screen.getByRole('button', { name: 'Forget' }));
+    await waitFor(() => expect(screen.queryByText('Prior offer was $75.')).toBeNull());
+    expect(screen.getByText('No eligible memories retrieved.')).toBeTruthy();
+  });
+
   it('sends a correction with the required source and expiry', async () => {
     global.fetch.mockImplementation((path, options) => {
       if (path === '/api/session') return Promise.resolve({ ok: true, json: async () => ({ user: 'Tenant A' }) });

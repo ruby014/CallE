@@ -92,8 +92,9 @@ export default function App({ agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID
   async function refreshMemories() {
     try { setMemories(await apiFetch('/api/memories')); } catch (cause) { setError(`Unable to load memories: ${readableError(cause)}`); }
   }
+  const dropFromContext = (id) => setContext((current) => (current ? { ...current, memories: current.memories.filter((memory) => memory.id !== id) } : current));
   async function forgetMemory(id) {
-    try { await apiFetch(`/api/memories/${id}`, { method: 'DELETE' }); await refreshMemories(); } catch (cause) { setError(`Unable to forget memory: ${readableError(cause)}`); }
+    try { await apiFetch(`/api/memories/${id}`, { method: 'DELETE' }); dropFromContext(id); await refreshMemories(); } catch (cause) { setError(`Unable to forget memory: ${readableError(cause)}`); }
   }
   async function correctMemory(event) {
     event.preventDefault();
@@ -103,6 +104,7 @@ export default function App({ agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID
         source: editingMemory.source,
         expiresAt: editingMemory.expiresAt,
       } });
+      dropFromContext(editingMemory.id);
       setEditingMemory(null);
       await refreshMemories();
     } catch (cause) { setError(`Unable to correct memory: ${readableError(cause)}`); }
