@@ -205,7 +205,7 @@ export default function App({ agentId = import.meta.env.VITE_ELEVENLABS_AGENT_ID
             <section className="card" aria-labelledby="retrieved-heading"><h2 id="retrieved-heading">Retrieved for this run</h2>
               {context.memories.length ? <ul className="memory-list">{context.memories.map((memory) => <li key={memory.id}><div><span>{memory.content}</span> <small className="muted">({memory.source})</small></div></li>)}</ul> : <p className="muted">No eligible memories retrieved.</p>}
             </section>
-            {agentId ? <VoiceSession agentId={agentId} context={context} onAction={(action) => setActions((current) => [...current, action])} onFieldRequest={(field) => setActions((current) => [...current, { type: 'field_request', allowed: field.allowed }])} onOutcome={setOutcome} onError={(cause) => setError(readableError(cause))} /> : <p className="error" role="alert">Voice is not configured. Set VITE_ELEVENLABS_AGENT_ID to the public ElevenLabs agent ID.</p>}
+            {agentId ? <VoiceSession agentId={agentId} context={{ ...context, customerName: user.replace(/\s*\(.*\)$/, '') }} onAction={(action) => setActions((current) => [...current, action])} onFieldRequest={(field) => setActions((current) => [...current, { type: 'field_request', allowed: field.allowed }])} onOutcome={setOutcome} onError={(cause) => setError(readableError(cause))} /> : <p className="error" role="alert">Voice is not configured. Set VITE_ELEVENLABS_AGENT_ID to the public ElevenLabs agent ID.</p>}
             <Trace actions={actions} outcome={outcome} onSaveOffer={saveOffer} saved={saved} />
           </>}
         </div>

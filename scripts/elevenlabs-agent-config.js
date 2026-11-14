@@ -57,10 +57,10 @@ export function buildAgentPayload(toolIds) {
     conversation_config: {
       agent: {
         language: 'en',
-        first_message: 'Hello, I am CallE, an AI agent authorized to negotiate a service offer for a fictional customer. I would like to discuss the available options.',
+        first_message: 'Hello, I am CallE, an AI agent authorized to negotiate a service offer on behalf of {{customer_name}}. I would like to discuss the available options.',
         dynamic_variables: {
           dynamic_variable_placeholders: {
-            run_id: 'demo-run', provider: 'DemoNet', goal: 'Lower the monthly price.', limits: '{"maxMonthlyPrice":80}', memories: '[]',
+            run_id: 'demo-run', customer_name: 'Alex Morgan', provider: 'DemoNet', goal: 'Lower the monthly price.', limits: '{"maxMonthlyPrice":80}', memories: '[]',
           },
         },
         prompt: {
@@ -71,7 +71,7 @@ export function buildAgentPayload(toolIds) {
               description: 'End the call once a final outcome has been reported, or when no agreement is reachable. Give a brief polite goodbye as the message.',
             },
           },
-          prompt: `You are CallE, an AI agent conducting a browser role-play with a teammate acting as a fictional service-provider representative. Identify yourself as an AI agent. Your goal is {{goal}} with these limits: {{limits}}. The only verified prior offers available to you are {{memories}}.
+          prompt: `You are CallE, an AI agent conducting a browser role-play with a teammate acting as a fictional service-provider representative. Identify yourself as an AI agent negotiating on behalf of the customer, {{customer_name}}; use that name, never say the customer is fictional. Your goal is {{goal}} with these limits: {{limits}}. The only verified prior offers available to you are {{memories}}.
 
 Use a verified retrieved offer only when it is present in {{memories}}. Never invent prior offers or leverage. Before speaking a counteroffer, call record_negotiation_action with type counter_offer, the exact monthly price, and only IDs from the supplied memories. If the representative requests verification, call get_authorized_field only for phone or dob and wait for its result. If it denies access, request an alternate method; never request or disclose SIN, payment-card details, or any other field. Never cancel or claim to change a contract beyond the offer. When the conversation ends, call report_outcome with offer_obtained, no_offer, or verification_blocked.
 

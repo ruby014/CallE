@@ -46,3 +46,10 @@ test('CallE agent can hang up: end_call system tool plus a no-deal exit rule', (
   assert.match(prompt.prompt, /do not keep talking/i);
   assert.match(prompt.prompt, /accept the offer on the user's behalf/i);
 });
+
+test('agent speaks for the named customer, not a fictional one', () => {
+  const { prompt, first_message: first } = buildAgentPayload([]).conversation_config.agent;
+  assert.match(first, /\{\{customer_name\}\}/);
+  assert.match(prompt.prompt, /\{\{customer_name\}\}/);
+  assert.doesNotMatch(first, /fictional/i);
+});

@@ -75,6 +75,7 @@ function VoiceSessionControls({ agentId, context, onAction, onOutcome, onFieldRe
         agentId,
         dynamicVariables: {
           run_id: context.runId,
+          customer_name: context.customerName || 'the customer',
           provider: context.provider,
           goal: context.goal,
           limits: JSON.stringify(context.limits),
