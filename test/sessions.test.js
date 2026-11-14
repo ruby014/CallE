@@ -40,6 +40,14 @@ test('body-supplied tenant cannot select identity; forged cookie is rejected', a
   assert.equal(forged.status, 401);
 });
 
+test('logout clears the cookie so the same client is rejected afterwards', async () => {
+  const agent = request.agent(build());
+  await agent.post('/api/session').send({ pin: 'PINA' });
+  assert.equal((await agent.get('/api/session')).status, 200);
+  assert.equal((await agent.post('/api/session/logout')).status, 204);
+  assert.equal((await agent.get('/api/session')).status, 401);
+});
+
 test('health is public and exposes no secrets', async () => {
   const res = await request(build()).get('/api/health');
   assert.deepEqual(res.body, { ok: true });

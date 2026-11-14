@@ -27,6 +27,11 @@ export function createApp({ config, sessionStore, memories, runs }) {
     }
   });
 
+  app.post('/api/session/logout', (_req, res) => {
+    res.clearCookie(COOKIE_NAME);
+    res.status(204).end();
+  });
+
   // Every other /api route requires a server-side session; tenant comes only from it.
   app.use('/api', async (req, res, next) => {
     try {
