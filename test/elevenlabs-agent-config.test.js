@@ -13,7 +13,7 @@ test('CallE agent config exposes the three browser client tools and trusted dyna
   const payload = buildAgentPayload(['tool-field', 'tool-action', 'tool-outcome']);
   assert.deepEqual(payload.conversation_config.agent.prompt.tool_ids, ['tool-field', 'tool-action', 'tool-outcome']);
   assert.equal(payload.conversation_config.agent.dynamic_variables.dynamic_variable_placeholders.run_id, 'demo-run');
-  assert.match(payload.conversation_config.agent.prompt.prompt, /Never accept, cancel, or claim to change a contract/);
+  assert.match(payload.conversation_config.agent.prompt.prompt, /Never cancel or claim to change a contract beyond the offer/);
 });
 
 test('a missing client tool is eligible for creation', () => {
