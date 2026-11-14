@@ -122,6 +122,46 @@ memory and run again to show the changed behavior.
 - Use a small, deterministic synthetic scenario so memory-on and memory-off
   runs can be compared consistently.
 
+## High-level architecture
+
+```mermaid
+flowchart LR
+    User["User: goal, limits, consent"] --> Web["React web app"]
+    Rep["Teammate: provider rep"] <-->|"live role-play audio"| Agent["ElevenLabs browser voice agent"]
+    Web <-->|"voice session"| Agent
+    Web -->|"start run, preferences"| API["Express / Node API"]
+    API -->|"derive demo tenant; enforce permissions"| Policy["Session and policy checks"]
+    Policy --> API
+    API -->|"memory query"| Embed["Embedding provider"]
+    Embed -->|"query vector"| API
+    API -->|"Vector Search with tenant, active, expiry filters"| Atlas[("MongoDB Atlas Sandbox")]
+    Atlas -->|"authorized memories"| API
+    API -->|"run context and short-lived session setup"| Web
+    Agent -->|"authorized-field tool request / run outcome"| API
+    API -->|"memory updates and sanitized trace"| Atlas
+    API -->|"outcome summary"| Mail["Email service"]
+    API -->|"fallback when mail is unavailable"| Preview["In-app email preview"]
+    Mail --> User
+    Preview --> Web
+```
+
+**Request flow:** React starts a run; Express derives the tenant from the
+server-side demo session, embeds the query, and retrieves only active,
+unexpired memories allowed for that tenant. The browser then opens the
+ElevenLabs voice session. The agent can request a call-scoped phone/DOB only
+through an Express policy-checked tool; it cannot access Atlas directly.
+
+**Completion flow:** Express stores the run trace and any user-approved memory
+change in Atlas, then sends a minimal outcome email or returns an email preview.
+Atlas and provider credentials remain server-side. The diagram's profile
+permissions and verification values use synthetic demo data only.
+
+**2.5–3-hour MVP boundary:** prioritize the tenant-filtered Vector Search path,
+memory correction/expiry, a successful live role-play, and the memory-on/off
+behavior trace. Keep the rep human-played and the tenant identities fixed for
+the demo. Actual email delivery is a stretch behind the preview fallback; do
+not build outbound telephony, a second AI rep, or production authentication.
+
 ## Constraints and open implementation choices
 
 The repository is nearly empty. The team has Atlas Sandbox access and an
