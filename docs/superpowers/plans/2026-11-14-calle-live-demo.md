@@ -127,6 +127,7 @@ Principal contains fixed `tenantId`, `userId`, and synthetic profile. Store/reva
   await assert.rejects(() => correctAsB(memoryA.id), /not found/i);
   await assert.rejects(() => retrieveWithEmbeddingFailure(), /embedding/i);
   ```
+- [ ] Before coding, consult the MongoDB Schema Design and Connection agent skills (https://www.mongodb.com/docs/agent-skills/); time-box 10 minutes. MongoDB MCP server is optional and used only if index creation via the driver fails.
 - [ ] Run `node --test test/memory.test.js`; expect failing cases before implementation.
 - [ ] Implement 1024-dimensional Voyage embeddings (`voyage-4-lite`; index `numDimensions: 1024`, cosine) and `$vectorSearch` pre-filters for `tenantId`, `allowedReaderIds`, `status`, and `expiresAt > now`. Index those filter fields. Re-read candidates from current documents with the same authorization filters to guard against stale search-index entries.
 - [ ] Implement owner-only writes. Correction creates a sourced replacement and supersedes the old version atomically; forgetting physically deletes the record/embedding. Reads exclude expiry immediately; TTL is optional cleanup, not access control.
