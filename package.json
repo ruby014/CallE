@@ -8,6 +8,7 @@
     "test": "node --test",
     "test:ui": "vitest run",
     "build": "vite build",
+    "check:atlas": "node scripts/check-atlas.js",
     "seed": "node scripts/seed.js"
   },
   "dependencies": {
