@@ -44,13 +44,76 @@ function createRecord({ id, principal, input, embedding, now, version, supersede
     createdAt: now,
     expiresAt: input.expiresAt,
     embedding,
+    ...(input.terms ? { terms: input.terms } : {}),
   };
 }
 
-function assertMemoryInput(input) {
+function assertTerms(terms) {
+  if (terms === undefined) return undefined;
+  if (!terms || typeof terms !== 'object' || Array.isArray(terms)) throw new Error('Memory terms are invalid');
+  const requiredText = ['provider', 'dataCap'];
+  if (requiredText.some((field) => typeof terms[field] !== 'string' || !terms[field].trim())) {
+    throw new Error('Memory terms are invalid');
+  }
+  if (typeof terms.currency !== 'string' || !/^[A-Z]{3}$/.test(terms.currency)) {
+    throw new Error('Memory terms are invalid');
+  }
+  const positiveNumbers = ['monthlyPrice', 'downloadMbps', 'uploadMbps'];
+  if (positiveNumbers.some((field) => !Number.isFinite(terms[field]) || terms[field] <= 0)) {
+    throw new Error('Memory terms are invalid');
+  }
+  if (terms.contractMonths !== null && (!Number.isInteger(terms.contractMonths) || terms.contractMonths <= 0)) {
+    throw new Error('Memory terms are invalid');
+  }
+  if (!Number.isFinite(terms.modemMonthlyFee) || terms.modemMonthlyFee < 0) {
+    throw new Error('Memory terms are invalid');
+  }
+  if (terms.promotionEndsAt !== null && (!(terms.promotionEndsAt instanceof Date) || Number.isNaN(terms.promotionEndsAt.valueOf()))) {
+    throw new Error('Memory terms are invalid');
+  }
+  const commitment = terms.commitment;
+  if (!commitment || typeof commitment !== 'object' || !['month_to_month', 'fixed_term'].includes(commitment.type)) {
+    throw new Error('Memory terms are invalid');
+  }
+  const endsAt = commitment.endsAt;
+  if (commitment.type === 'fixed_term' && (!(endsAt instanceof Date) || Number.isNaN(endsAt.valueOf()))) {
+    throw new Error('Memory terms are invalid');
+  }
+  if (commitment.type === 'month_to_month' && endsAt !== null) throw new Error('Memory terms are invalid');
+  const terminationFee = commitment.terminationFee;
+  if (!terminationFee || typeof terminationFee !== 'object' || !['known', 'unknown', 'not_applicable'].includes(terminationFee.status)) {
+    throw new Error('Memory terms are invalid');
+  }
+  const knownFee = terminationFee.status === 'known';
+  if (knownFee && (!Number.isFinite(terminationFee.amount) || terminationFee.amount < 0 ||
+    typeof terminationFee.currency !== 'string' || !/^[A-Z]{3}$/.test(terminationFee.currency))) {
+    throw new Error('Memory terms are invalid');
+  }
+  return {
+    provider: terms.provider.trim(),
+    monthlyPrice: terms.monthlyPrice,
+    currency: terms.currency,
+    downloadMbps: terms.downloadMbps,
+    uploadMbps: terms.uploadMbps,
+    dataCap: terms.dataCap.trim(),
+    contractMonths: terms.contractMonths,
+    modemMonthlyFee: terms.modemMonthlyFee,
+    promotionEndsAt: terms.promotionEndsAt,
+    commitment: {
+      type: commitment.type,
+      endsAt: commitment.type === 'fixed_term' ? endsAt : null,
+      terminationFee: knownFee
+        ? { status: 'known', amount: terminationFee.amount, currency: terminationFee.currency }
+        : { status: terminationFee.status, amount: null, currency: null },
+    },
+  };
+}
+
+function validateMemoryInput(input) {
   if (!input || typeof input.content !== 'string' || !input.content.trim()) throw new Error('Memory content is required');
   if (typeof input.source !== 'string' || !input.source.trim()) throw new Error('Memory source is required');
   if (!(input.expiresAt instanceof Date) || Number.isNaN(input.expiresAt.valueOf())) throw new Error('Memory expiry is required');
+  return { ...input, terms: assertTerms(input.terms) };
 }
 
 export function createMemoryService({
@@ -93,12 +156,12 @@ export function createMemoryService({
     },
 
     async saveMemory(db, principal, input) {
-      assertMemoryInput(input);
-      const embedding = await getEmbedding(input.content, 'document');
+      const validInput = validateMemoryInput(input);
+      const embedding = await getEmbedding(validInput.content, 'document');
       const record = createRecord({
         id: newId(),
         principal,
-        input,
+        input: validInput,
         embedding,
         now: now(),
         version: 1,
@@ -109,7 +172,7 @@ export function createMemoryService({
     },
 
     async correctMemory(db, principal, id, input) {
-      assertMemoryInput(input);
+      const validInput = validateMemoryInput(input);
       const collection = db.collection(COLLECTION);
       const session = db.client?.startSession();
       if (!session) throw new Error('MongoDB session support is required for memory corrections');
@@ -119,11 +182,11 @@ export function createMemoryService({
         await session.withTransaction(async () => {
           const original = await collection.findOne(ownerFilter(principal, id), { session });
           if (!original) throw new Error('Memory not found');
-          const embedding = await getEmbedding(input.content, 'document');
+          const embedding = await getEmbedding(validInput.content, 'document');
           const replacement = createRecord({
             id: newId(),
             principal,
-            input,
+            input: validInput,
             embedding,
             now: now(),
             version: original.version + 1,

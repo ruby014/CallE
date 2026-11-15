@@ -57,10 +57,25 @@ export function createApp({ config, sessionStore, memories, runs }) {
       next(err);
     }
   };
+  const parseTerms = (terms) => {
+    if (!terms || typeof terms !== 'object') return terms;
+    const commitment = terms.commitment && typeof terms.commitment === 'object'
+      ? {
+        ...terms.commitment,
+        endsAt: terms.commitment.endsAt === null ? null : new Date(terms.commitment.endsAt),
+      }
+      : terms.commitment;
+    return {
+      ...terms,
+      promotionEndsAt: terms.promotionEndsAt === null ? null : new Date(terms.promotionEndsAt),
+      commitment,
+    };
+  };
   const parseMemory = (body) => ({
     content: body?.content,
     source: body?.source,
     expiresAt: new Date(body?.expiresAt),
+    terms: parseTerms(body?.terms),
   });
 
   if (memories) {

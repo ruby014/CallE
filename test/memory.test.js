@@ -135,6 +135,99 @@ test('save memory derives tenant and owner and creates a document embedding', as
   assert.deepEqual(calls, [{ text: 'Representative offered $75 per month.', inputType: 'document' }]);
 });
 
+test('save memory preserves validated structured internet-plan terms', async () => {
+  const db = createDb([]);
+  const promotionEndsAt = new Date('2026-12-31T00:00:00.000Z');
+
+  const saved = await createService().saveMemory(db, PRINCIPAL_A, {
+    content: 'DemoNet offered Internet 500 for $75 per month for 12 months.',
+    source: 'user-approved',
+    expiresAt: promotionEndsAt,
+    terms: {
+      provider: 'DemoNet',
+      monthlyPrice: 75,
+      currency: 'CAD',
+      downloadMbps: 500,
+      uploadMbps: 100,
+      dataCap: 'unlimited',
+      contractMonths: 12,
+      modemMonthlyFee: 10,
+      promotionEndsAt,
+      commitment: {
+        type: 'fixed_term',
+        endsAt: new Date('2027-05-31T00:00:00.000Z'),
+        terminationFee: { status: 'known', amount: 150, currency: 'CAD' },
+      },
+    },
+  });
+
+  assert.deepEqual(saved.terms, {
+    provider: 'DemoNet',
+    monthlyPrice: 75,
+    currency: 'CAD',
+    downloadMbps: 500,
+    uploadMbps: 100,
+    dataCap: 'unlimited',
+    contractMonths: 12,
+    modemMonthlyFee: 10,
+    promotionEndsAt,
+    commitment: {
+      type: 'fixed_term',
+      endsAt: new Date('2027-05-31T00:00:00.000Z'),
+      terminationFee: { status: 'known', amount: 150, currency: 'CAD' },
+    },
+  });
+  assert.deepEqual(db.state.documents[0].terms, saved.terms);
+});
+
+test('save memory accepts month-to-month terms without a promotion or termination fee', async () => {
+  const db = createDb([]);
+
+  const saved = await createService().saveMemory(db, PRINCIPAL_A, {
+    content: 'DemoNet current plan is month-to-month at $95 per month.',
+    source: 'user-entered',
+    expiresAt: new Date('2027-12-31T00:00:00.000Z'),
+    terms: {
+      provider: 'DemoNet',
+      monthlyPrice: 95,
+      currency: 'CAD',
+      downloadMbps: 500,
+      uploadMbps: 100,
+      dataCap: 'unlimited',
+      contractMonths: null,
+      modemMonthlyFee: 10,
+      promotionEndsAt: null,
+      commitment: {
+        type: 'month_to_month',
+        endsAt: null,
+        terminationFee: { status: 'not_applicable' },
+      },
+    },
+  });
+
+  assert.deepEqual(saved.terms.commitment, {
+    type: 'month_to_month',
+    endsAt: null,
+    terminationFee: { status: 'not_applicable', amount: null, currency: null },
+  });
+  assert.equal(saved.terms.contractMonths, null);
+  assert.equal(saved.terms.promotionEndsAt, null);
+});
+
+test('save memory rejects malformed structured terms', async () => {
+  const db = createDb([]);
+
+  await assert.rejects(
+    () => createService().saveMemory(db, PRINCIPAL_A, {
+      content: 'Bad offer.',
+      source: 'user-approved',
+      expiresAt: new Date('2026-12-31T00:00:00.000Z'),
+      terms: { provider: 'DemoNet', monthlyPrice: '75' },
+    }),
+    /terms/i,
+  );
+});
+
 test('a foreign tenant cannot correct another tenant memory', async () => {
   const db = createDb([memory({ _id: 'memory-A' })]);
 
